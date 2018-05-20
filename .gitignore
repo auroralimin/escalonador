@@ -1,0 +1,9 @@
+# executaveis esperados
+*solicita_execucao
+*escalonador
+*verifica_jobs
+*escalona_jobs
+*remove_postergado
+*lista_postergados
+*shutdown_postergado
+*hello_world
