@@ -13,6 +13,9 @@
 
 #include <unistd.h>
 
+#define QUANTUM 5
+#define DEBUG true
+
 #define MAILBOX 1234
 #define MAIL_PERMISSION 0755
 #define TUPLE_MAX_SIZE 512
@@ -25,7 +28,8 @@
 #define BOLD "\e[1m"
 #define OFF "\e[0m"
 #define COLOR(id) "\033[1;3" << id << "m"
-#define ERROR_PRINT COLOR(color::red) << "Erro: " << OFF
+#define ERROR_PRINT COLOR(red) << "Erro: " << OFF
+#define DEBUG_PRINT COLOR(magenta) << "[DEBUG] " << OFF
 enum color {
     red = 1,
     green = 2,

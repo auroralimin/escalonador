@@ -68,7 +68,7 @@ void waitTuple(std::string tuple) {
     hour = std::stoi(tokens[0].substr(0, pos));
     min = std::stoi(tokens[0].substr(pos + 1, tokens[0].length()));
     time = (60 * hour + min) * 60;
-    sleep(time);
+    //sleep(time);
 
     unsigned int nJobs = std::stoi(tokens[1]);
     struct bufferJob buffer;
@@ -77,7 +77,9 @@ void waitTuple(std::string tuple) {
     buffer.job.priority = std::stoi(tokens[2]);
     strcpy(buffer.job.file, tokens[3].c_str());
     for (int i = 0; i < nJobs; i++) {
-        std::cout << "Copia " << i << " sendo enviada.." << std::endl;
+#ifdef DEBUG
+        std::cout << DEBUG_PRINT << "Copia " << i << " sendo enviada.." << std::endl;
+#endif
         if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), IPC_NOWAIT) ==
             -1) {
             std::cerr << "Nao conseguiu enviar o job para executar"
@@ -101,7 +103,9 @@ int main(int argc, char** argv) {
     stm.close();
 
     ppid = getpid();
-    std::cout << "ppid = " << ppid << std::endl;
+#ifdef DEBUG
+    std::cout <<  DEBUG_PRINT << "ppid = " << ppid << std::endl;
+#endif
     signal(SIGCHLD, waitChilds);
     signal(SIGUSR1, printTuples);
     signal(SIGTERM, epitaph);
