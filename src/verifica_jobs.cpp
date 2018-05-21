@@ -68,17 +68,19 @@ void waitTuple(std::string tuple) {
     hour = std::stoi(tokens[0].substr(0, pos));
     min = std::stoi(tokens[0].substr(pos + 1, tokens[0].length()));
     time = (60 * hour + min) * 60;
-    //sleep(time);
+    // sleep(time);
 
     unsigned int nJobs = std::stoi(tokens[1]);
     struct bufferJob buffer;
     buffer.mtype = MSG_JOB;
     buffer.job.pid = 0;
-    buffer.job.priority = std::stoi(tokens[2]);
+    buffer.job.priority = std::stoi(tokens[2]) - 1;
+    buffer.job.finished = false;
     strcpy(buffer.job.file, tokens[3].c_str());
     for (int i = 0; i < nJobs; i++) {
 #ifdef DEBUG
-        std::cout << DEBUG_PRINT << "Copia " << i << " sendo enviada.." << std::endl;
+        std::cout << DEBUG_PRINT << "Copia " << i << " sendo enviada.."
+                  << std::endl;
 #endif
         if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), IPC_NOWAIT) ==
             -1) {
@@ -104,7 +106,7 @@ int main(int argc, char** argv) {
 
     ppid = getpid();
 #ifdef DEBUG
-    std::cout <<  DEBUG_PRINT << "ppid = " << ppid << std::endl;
+    std::cout << DEBUG_PRINT << "ppid = " << ppid << std::endl;
 #endif
     signal(SIGCHLD, waitChilds);
     signal(SIGUSR1, printTuples);

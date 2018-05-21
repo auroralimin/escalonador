@@ -13,8 +13,9 @@
 
 #include <unistd.h>
 
-#define QUANTUM 5
+#define QUANTUM 1
 #define DEBUG true
+#define N_QUEUES 3
 
 #define MAILBOX 1234
 #define MAIL_PERMISSION 0755
@@ -46,6 +47,7 @@ struct job {
     unsigned int priority;
     bool oldQueue;
     bool descending;
+    bool finished;
     char file[JOB_MAX_SIZE];
     char submitTime[JOB_MAX_SIZE];
     char initTime[JOB_MAX_SIZE];

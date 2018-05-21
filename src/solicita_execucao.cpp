@@ -12,6 +12,15 @@ int main(int argc, char** argv) {
                   << std::endl;
         exit(EXIT_FAILURE);
     }
+    if (atoi(argv[2]) < 1) {
+        std::cerr << "Deve pedir ao menos uma copia" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    if (atoi(argv[3]) < 1 || atoi(argv[3]) > 3) {
+        std::cerr << "A prioridade da execucao deve ser de 1 a 3, "
+                  << "sendo que 1>2>3" << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
     int mbId = msgget(MAILBOX, MAIL_PERMISSION);
     if (mbId == -1) {
