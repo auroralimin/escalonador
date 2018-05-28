@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <csignal>
 #include <cstring>
+#include <fstream>
 
 #include <unistd.h>
 
@@ -24,7 +25,9 @@
 #define JOB_MAX_SIZE 255
 
 #define VERIFICA_PID_FILE "/tmp/verifica_jobs.pid"
+#define ESCALONA_PID_FILE "/tmp/escalona_jobs.pid"
 #define TUPLE_TITLE "jobs\thora:min\tcopias\t\tprioridade\tarq executavel"
+#define JOB_TITLE "pid\texec\t\tt_submit\t\t\tt_init\t\t\t\tt_term"
 
 #define BOLD "\e[1m"
 #define OFF "\e[0m"
@@ -40,7 +43,15 @@ enum color {
     cyan = 6,
 };
 
-enum msg_type { MSG_TUPLE = 1, MSG_MAP, MSG_JOB, MSG_REPLY };
+enum msg_type {
+    MSG_TUPLE = 1,
+    MSG_MAP,
+    MSG_JOB,
+    MSG_REPLY,
+    MSG_V_KILL,
+    MSG_E1_KILL,
+    MSG_E2_KILL
+};
 
 struct job {
     pid_t pid;

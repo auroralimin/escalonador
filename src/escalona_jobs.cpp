@@ -7,6 +7,7 @@
 
 bool executing = false;
 int currentPriority = -1;
+int mbId;
 pid_t currentPid = 0;
 std::queue<struct job> queues[N_QUEUES];
 std::list<struct job> finishedJobs;
@@ -30,7 +31,7 @@ void jobQuantum(int) {
         job.priority += multiplier;
     }
     queues[job.priority].push(job);
-    queues[currentPriority].pop();
+    queues[currentPriority].front().finished = true;
 
     executing = false;
 }
@@ -50,16 +51,81 @@ void jobFinished(int) {
         struct job job = queues[currentPriority].front();
         auto cTime = std::chrono::system_clock::now();
         std::time_t eTime = std::chrono::system_clock::to_time_t(cTime);
-        strcpy(job.endTime, std::ctime(&eTime));
+        std::string endTime = std::string(std::ctime(&eTime));
+        endTime = endTime.substr(0, endTime.size() - 1);
+        strcpy(job.endTime, endTime.c_str());
         finishedJobs.emplace_back(job);
         queues[currentPriority].front().finished = true;
         executing = false;
     }
 }
 
+void eShutdown(int) {
+    struct bufferJob buffer;
+
+    buffer.mtype = MSG_E2_KILL;
+    for (auto job : finishedJobs) {
+        buffer.job = job;
+        if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), IPC_NOWAIT) ==
+            -1) {
+            std::cerr << "Nao conseguiu enviar o job para shutdown"
+                      << std::endl;
+            std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
+        }
+#ifdef DEBUG
+        std::cout << DEBUG_PRINT << "Sending finished job: " << job.pid
+                  << std::endl;
+#endif
+    }
+
+    buffer.job.pid = -1;
+    if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), IPC_NOWAIT) == -1) {
+        std::cerr << "Nao conseguiu enviar o job para finalizar shutdown"
+                  << std::endl;
+        std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
+    }
+
+    buffer.mtype = MSG_E1_KILL;
+    for (int i = 0; i < N_QUEUES; i++) {
+        while (!queues[i].empty()) {
+            if (queues[i].front().finished) {
+                queues[i].pop();
+                continue;
+            }
+
+            buffer.job = queues[i].front();
+            if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), IPC_NOWAIT) ==
+                -1) {
+                std::cerr << "Nao conseguiu enviar o job para shutdown"
+                          << std::endl;
+                std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
+            }
+#ifdef DEBUG
+            std::cout << DEBUG_PRINT
+                      << "Sending unfinished job: " << buffer.job.pid
+                      << std::endl;
+#endif
+            if (buffer.job.pid) {
+                kill(buffer.job.pid, SIGTERM);
+            }
+            queues[i].pop();
+        }
+    }
+
+    buffer.job.pid = -1;
+    if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), IPC_NOWAIT) == -1) {
+        std::cerr << "Nao conseguiu enviar o job para finalizar shutdown"
+                  << std::endl;
+        std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
+    }
+
+    exit(0);
+}
+
 void cleanQueues() {
     for (int i = 0; i < N_QUEUES; i++) {
         while ((!queues[i].empty()) && (queues[i].front().finished)) {
+            std::cout << "LIMPANDO JOB: " << queues[i].front().pid << std::endl;
             queues[i].pop();
         }
     }
@@ -76,7 +142,7 @@ int firstQueueNotEmpty() {
 }
 
 int main(int argc, char** argv) {
-    int mbId = msgget(MAILBOX, MAIL_PERMISSION);
+    mbId = msgget(MAILBOX, MAIL_PERMISSION);
     if (mbId == -1) {
         std::cerr << "Nao conseguiu abrir a caixa postal, chave: " << MAILBOX
                   << std::endl;
@@ -84,8 +150,13 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
+    std::ofstream stm(ESCALONA_PID_FILE, std::ofstream::out);
+    stm << getpid() << std::endl;
+    stm.close();
+
     signal(SIGALRM, jobQuantum);
     signal(SIGCHLD, jobFinished);
+    signal(SIGUSR2, eShutdown);
 
 #ifdef DEBUG
     std::cout << DEBUG_PRINT << "ppid = " << getpid() << std::endl;
@@ -100,7 +171,9 @@ int main(int argc, char** argv) {
 #endif
             auto cTime = std::chrono::system_clock::now();
             std::time_t iTime = std::chrono::system_clock::to_time_t(cTime);
-            strcpy(buffer.job.initTime, std::ctime(&iTime));
+            std::string initTime = std::string(std::ctime(&iTime));
+            initTime = initTime.substr(0, initTime.size() - 1);
+            strcpy(buffer.job.initTime, initTime.c_str());
             queues[buffer.job.priority].push(buffer.job);
         }
         if (errno != ENOMSG) {
@@ -148,6 +221,8 @@ int main(int argc, char** argv) {
             std::cout << DEBUG_PRINT << "Executed proccess: " << job.pid
                       << std::endl;
             std::cout << DEBUG_PRINT << "Priority = " << job.priority + 1
+                      << std::endl;
+            std::cout << DEBUG_PRINT << "Finished = " << job.finished
                       << std::endl;
 #endif
         }

@@ -2,7 +2,6 @@
 #include <csignal>
 #include <ctime>
 #include <ctime>
-#include <fstream>
 #include <sstream>
 #include <string>
 
@@ -19,13 +18,13 @@ void waitChilds(int) {
     }
 }
 
-void printTuples(int) {
+void sendTuple(msg_type type) {
     std::stringstream stm;
     for (auto job : jobs) {
         stm << job.first << '\t' << job.second << std::endl;
     }
     struct bufferMap buffer;
-    buffer.mtype = MSG_MAP;
+    buffer.mtype = type;
     std::string mapStr(stm.str());
     if (mapStr.length() >= MAP_MAX_SIZE) {
         mapStr = "Lista de postergados eh grande demais para ser enviada\n";
@@ -39,6 +38,8 @@ void printTuples(int) {
     }
 }
 
+void listTuples(int) { sendTuple(MSG_MAP); }
+
 void epitaph(int) {
     pid_t pid = getpid();
     if ((ppid == pid) && (msgctl(mbId, IPC_RMID, NULL) != 0)) {
@@ -48,10 +49,18 @@ void epitaph(int) {
     exit(0);
 }
 
+void vShutdown(int) {
+    sendTuple(MSG_V_KILL);
+
+    for (auto job : jobs) {
+        kill(job.first, SIGTERM);
+    }
+}
+
 void waitTuple(std::string tuple) {
     auto cTime = std::chrono::system_clock::now();
     std::time_t sTime = std::chrono::system_clock::to_time_t(cTime);
-    std::string submitTime = std::ctime(&sTime);
+    std::string submitTime = std::string(std::ctime(&sTime));
 
     std::string tokens[4];
     std::string delimiter("\t\t");
@@ -76,6 +85,8 @@ void waitTuple(std::string tuple) {
     buffer.job.pid = 0;
     buffer.job.priority = std::stoi(tokens[2]) - 1;
     buffer.job.finished = false;
+    submitTime = submitTime.substr(0, submitTime.size() - 1);
+    strcpy(buffer.job.submitTime, submitTime.c_str());
     strcpy(buffer.job.file, tokens[3].c_str());
     for (int i = 0; i < nJobs; i++) {
 #ifdef DEBUG
@@ -109,7 +120,8 @@ int main(int argc, char** argv) {
     std::cout << DEBUG_PRINT << "ppid = " << ppid << std::endl;
 #endif
     signal(SIGCHLD, waitChilds);
-    signal(SIGUSR1, printTuples);
+    signal(SIGUSR1, listTuples);
+    signal(SIGUSR2, vShutdown);
     signal(SIGTERM, epitaph);
     signal(SIGQUIT, epitaph);
     signal(SIGINT, epitaph);

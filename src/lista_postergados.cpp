@@ -7,7 +7,7 @@ int main(int argc, char** argv) {
     std::ifstream stm(VERIFICA_PID_FILE, std::ifstream::in);
     pid_t pid;
     stm >> pid;
-    kill(pid, SIGUSR1);
+    stm.close();
 
     int mbId = msgget(MAILBOX, MAIL_PERMISSION);
     if (mbId == -1) {
@@ -16,6 +16,8 @@ int main(int argc, char** argv) {
         std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
         exit(EXIT_FAILURE);
     }
+
+    kill(pid, SIGUSR1);
 
     struct bufferMap buffer;
     if (msgrcv(mbId, (void*)&buffer, sizeof(buffer.mtext), MSG_MAP, 0) == -1) {
