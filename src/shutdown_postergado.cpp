@@ -34,15 +34,16 @@ int main(int argc, char** argv) {
               << " executados:" << OFF << std::endl;
     std::cout << BOLD << COLOR(cyan) << TUPLE_TITLE << OFF << std::endl;
     std::cout << vBuffer.mtext;
-    std::cout << BOLD << COLOR(blue) << "--------------------------------"
+    std::cout << BOLD << COLOR(blue) << "-------------------------------------"
+              << "------------------------------------------------------------"
               << OFF << std::endl;
 
     std::cout << std::endl;
 
     std::cout << BOLD << COLOR(blue) << "Processos que estavam na fila de"
-              << " execução e serão interrompidos:\n(obs: pid 0 significa que"
-              << " o processo foi para a fila de execução mas nunca chegou a"
-              << " ser executado)" << OFF << std::endl;
+              << " execução e serão interrompidos:\n(OBS: pid 0 significa que"
+              << " o processo foi para a fila de execução mas nunca começou a"
+              << " executar)" << OFF << std::endl;
     std::cout << BOLD << COLOR(cyan) << JOB_TITLE << OFF << std::endl;
     struct bufferJob eBuffer;
     while (msgrcv(mbId, (void*)&eBuffer, sizeof(eBuffer.job), MSG_E1_KILL, 0) >
@@ -53,7 +54,8 @@ int main(int argc, char** argv) {
                   << "\t"
                   << "--" << std::endl;
     }
-    std::cout << BOLD << COLOR(blue) << "--------------------------------"
+    std::cout << BOLD << COLOR(blue) << "-------------------------------------"
+              << "------------------------------------------------------------"
               << OFF << std::endl;
 
     std::cout << BOLD << COLOR(blue) << "Processos finalizados" << OFF
@@ -66,7 +68,8 @@ int main(int argc, char** argv) {
                   << eBuffer.job.submitTime << "\t" << eBuffer.job.initTime
                   << "\t" << eBuffer.job.endTime << std::endl;
     }
-    std::cout << BOLD << COLOR(blue) << "--------------------------------"
+    std::cout << BOLD << COLOR(blue) << "-------------------------------------"
+              << "------------------------------------------------------------"
               << OFF << std::endl;
 
     kill(vPid, SIGTERM);

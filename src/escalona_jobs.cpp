@@ -9,7 +9,7 @@ bool executing = false;
 int currentPriority = -1;
 int mbId;
 pid_t currentPid = 0;
-std::queue<struct job> queues[N_QUEUES];
+std::list<struct job> queues[N_QUEUES];
 std::list<struct job> finishedJobs;
 
 void jobQuantum(int) {
@@ -30,7 +30,7 @@ void jobQuantum(int) {
         }
         job.priority += multiplier;
     }
-    queues[job.priority].push(job);
+    queues[job.priority].push_back(job);
     queues[currentPriority].front().finished = true;
 
     executing = false;
@@ -48,14 +48,27 @@ void jobFinished(int) {
 #ifdef DEBUG
         std::cout << DEBUG_PRINT << "Finished " << pid << std::endl;
 #endif
-        struct job job = queues[currentPriority].front();
+        int index;
+        struct job job;
+        bool found = false;
+        for (index = 0; (index < N_QUEUES) && (!found); index++) {
+            for (auto& qJob : queues[index]) {
+                if ((qJob.pid == pid) && (!qJob.finished)) {
+                    qJob.finished = true;
+                    job = qJob;
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (!found) continue;
+
         auto cTime = std::chrono::system_clock::now();
         std::time_t eTime = std::chrono::system_clock::to_time_t(cTime);
         std::string endTime = std::string(std::ctime(&eTime));
         endTime = endTime.substr(0, endTime.size() - 1);
         strcpy(job.endTime, endTime.c_str());
         finishedJobs.emplace_back(job);
-        queues[currentPriority].front().finished = true;
         executing = false;
     }
 }
@@ -89,7 +102,7 @@ void eShutdown(int) {
     for (int i = 0; i < N_QUEUES; i++) {
         while (!queues[i].empty()) {
             if (queues[i].front().finished) {
-                queues[i].pop();
+                queues[i].pop_front();
                 continue;
             }
 
@@ -108,7 +121,7 @@ void eShutdown(int) {
             if (buffer.job.pid) {
                 kill(buffer.job.pid, SIGTERM);
             }
-            queues[i].pop();
+            queues[i].pop_front();
         }
     }
 
@@ -125,8 +138,7 @@ void eShutdown(int) {
 void cleanQueues() {
     for (int i = 0; i < N_QUEUES; i++) {
         while ((!queues[i].empty()) && (queues[i].front().finished)) {
-            std::cout << "LIMPANDO JOB: " << queues[i].front().pid << std::endl;
-            queues[i].pop();
+            queues[i].pop_front();
         }
     }
 }
@@ -174,7 +186,7 @@ int main(int argc, char** argv) {
             std::string initTime = std::string(std::ctime(&iTime));
             initTime = initTime.substr(0, initTime.size() - 1);
             strcpy(buffer.job.initTime, initTime.c_str());
-            queues[buffer.job.priority].push(buffer.job);
+            queues[buffer.job.priority].push_back(buffer.job);
         }
         if (errno != ENOMSG) {
             std::cerr << "Problema de comunicacao entre caixas postais"
@@ -221,8 +233,6 @@ int main(int argc, char** argv) {
             std::cout << DEBUG_PRINT << "Executed proccess: " << job.pid
                       << std::endl;
             std::cout << DEBUG_PRINT << "Priority = " << job.priority + 1
-                      << std::endl;
-            std::cout << DEBUG_PRINT << "Finished = " << job.finished
                       << std::endl;
 #endif
         }
