@@ -40,24 +40,7 @@ int main(int argc, char** argv) {
 
     std::cout << std::endl;
 
-    std::cout << BOLD << COLOR(blue) << "Processos que estavam na fila de"
-              << " execução e serão interrompidos:\n(OBS: pid 0 significa que"
-              << " o processo foi para a fila de execução mas nunca começou a"
-              << " executar)" << OFF << std::endl;
-    std::cout << BOLD << COLOR(cyan) << JOB_TITLE << OFF << std::endl;
     struct bufferJob eBuffer;
-    while (msgrcv(mbId, (void*)&eBuffer, sizeof(eBuffer.job), MSG_E1_KILL, 0) >
-               0 &&
-           eBuffer.job.pid != -1) {
-        std::cout << eBuffer.job.pid << "\t" << eBuffer.job.file << "\t"
-                  << eBuffer.job.submitTime << "\t" << eBuffer.job.initTime
-                  << "\t"
-                  << "--" << std::endl;
-    }
-    std::cout << BOLD << COLOR(blue) << "-------------------------------------"
-              << "------------------------------------------------------------"
-              << OFF << std::endl;
-
     std::cout << BOLD << COLOR(blue) << "Processos finalizados" << OFF
               << std::endl;
     std::cout << BOLD << COLOR(cyan) << JOB_TITLE << OFF << std::endl;
@@ -72,6 +55,22 @@ int main(int argc, char** argv) {
               << "------------------------------------------------------------"
               << OFF << std::endl;
 
+    std::cout << BOLD << COLOR(blue) << "Processos que estavam na fila de"
+              << " execução e serão interrompidos:\n(OBS: pid 0 significa que"
+              << " o processo foi para a fila de execução mas nunca começou a"
+              << " executar)" << OFF << std::endl;
+    std::cout << BOLD << COLOR(cyan) << JOB_TITLE << OFF << std::endl;
+    while (msgrcv(mbId, (void*)&eBuffer, sizeof(eBuffer.job), MSG_E1_KILL, 0) >
+               0 &&
+           eBuffer.job.pid != -1) {
+        std::cout << eBuffer.job.pid << "\t" << eBuffer.job.file << "\t"
+                  << eBuffer.job.submitTime << "\t" << eBuffer.job.initTime
+                  << "\t"
+                  << "--" << std::endl;
+    }
+    std::cout << BOLD << COLOR(blue) << "-------------------------------------"
+              << "------------------------------------------------------------"
+              << OFF << std::endl;
     kill(vPid, SIGTERM);
     return 0;
 }

@@ -14,7 +14,7 @@
 
 #include <unistd.h>
 
-#define QUANTUM 1
+#define QUANTUM 5
 #define DEBUG true
 #define N_QUEUES 3
 
@@ -24,8 +24,9 @@
 #define MAP_MAX_SIZE 4096
 #define JOB_MAX_SIZE 255
 
-#define VERIFICA_PID_FILE "/tmp/verifica_jobs.pid"
+#define VERIFICA_PID_FILE "/tmp/escalonador.pid"
 #define ESCALONA_PID_FILE "/tmp/escalona_jobs.pid"
+#define ESCALONA_EXEC "escalona_jobs"
 #define TUPLE_TITLE "jobs\thora:min\tcopias\t\tprioridade\tarq executavel"
 #define JOB_TITLE "pid\texec\t\tt_submit\t\t\tt_init\t\t\t\tt_term"
 
@@ -33,7 +34,7 @@
 #define OFF "\e[0m"
 #define COLOR(id) "\033[1;3" << id << "m"
 #define ERROR_PRINT COLOR(red) << "Erro: " << OFF
-#define DEBUG_PRINT COLOR(magenta) << "[DEBUG] " << OFF
+#define DEBUG_PRINT(color_id) COLOR(color_id) << "[DEBUG] " << OFF
 enum color {
     red = 1,
     green = 2,

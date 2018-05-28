@@ -14,7 +14,7 @@ std::list<struct job> finishedJobs;
 
 void jobQuantum(int) {
 #ifdef DEBUG
-    std::cout << DEBUG_PRINT << "Quantum! " << currentPid << std::endl;
+    std::cout << DEBUG_PRINT(magenta) << "Quantum! " << currentPid << std::endl;
 #endif
     kill(currentPid, SIGTSTP);
 
@@ -46,7 +46,7 @@ void jobFinished(int) {
         }
         alarm(0);
 #ifdef DEBUG
-        std::cout << DEBUG_PRINT << "Finished " << pid << std::endl;
+        std::cout << DEBUG_PRINT(magenta) << "Finished " << pid << std::endl;
 #endif
         int index;
         struct job job;
@@ -79,20 +79,20 @@ void eShutdown(int) {
     buffer.mtype = MSG_E2_KILL;
     for (auto job : finishedJobs) {
         buffer.job = job;
-        if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), IPC_NOWAIT) ==
+        if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), 0) ==
             -1) {
             std::cerr << "Nao conseguiu enviar o job para shutdown"
                       << std::endl;
             std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
         }
 #ifdef DEBUG
-        std::cout << DEBUG_PRINT << "Sending finished job: " << job.pid
+        std::cout << DEBUG_PRINT(magenta) << "Sending finished job: " << job.pid
                   << std::endl;
 #endif
     }
 
     buffer.job.pid = -1;
-    if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), IPC_NOWAIT) == -1) {
+    if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), 0) == -1) {
         std::cerr << "Nao conseguiu enviar o job para finalizar shutdown"
                   << std::endl;
         std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
@@ -107,14 +107,14 @@ void eShutdown(int) {
             }
 
             buffer.job = queues[i].front();
-            if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), IPC_NOWAIT) ==
+            if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), 0) ==
                 -1) {
                 std::cerr << "Nao conseguiu enviar o job para shutdown"
                           << std::endl;
                 std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
             }
 #ifdef DEBUG
-            std::cout << DEBUG_PRINT
+            std::cout << DEBUG_PRINT(magenta)
                       << "Sending unfinished job: " << buffer.job.pid
                       << std::endl;
 #endif
@@ -126,7 +126,7 @@ void eShutdown(int) {
     }
 
     buffer.job.pid = -1;
-    if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), IPC_NOWAIT) == -1) {
+    if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), 0) == -1) {
         std::cerr << "Nao conseguiu enviar o job para finalizar shutdown"
                   << std::endl;
         std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
@@ -171,14 +171,14 @@ int main(int argc, char** argv) {
     signal(SIGUSR2, eShutdown);
 
 #ifdef DEBUG
-    std::cout << DEBUG_PRINT << "ppid = " << getpid() << std::endl;
+    std::cout << DEBUG_PRINT(magenta) << "escalona ppid = " << getpid() << std::endl;
 #endif
     struct bufferJob buffer;
     while (true) {
         while (msgrcv(mbId, (void*)&buffer, sizeof(buffer.job), MSG_JOB,
                       IPC_NOWAIT) > 0) {
 #ifdef DEBUG
-            std::cout << DEBUG_PRINT << "Received msg: " << buffer.job.file
+            std::cout << DEBUG_PRINT(magenta) << "Received msg: " << buffer.job.file
                       << std::endl;
 #endif
             auto cTime = std::chrono::system_clock::now();
@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
             struct job& job = queues[index].front();
             if (job.pid == 0) {
 #ifdef DEBUG
-                std::cout << DEBUG_PRINT << "Executed for the 1sr time"
+                std::cout << DEBUG_PRINT(magenta) << "Executed for the 1sr time"
                           << std::endl;
 #endif
                 job.descending = true;
@@ -220,7 +220,7 @@ int main(int argc, char** argv) {
                 }
             } else {
 #ifdef DEBUG
-                std::cout << DEBUG_PRINT << "Continued process: " << job.pid
+                std::cout << DEBUG_PRINT(magenta) << "Continued process: " << job.pid
                           << std::endl;
 #endif
                 kill(job.pid, SIGCONT);
@@ -230,9 +230,9 @@ int main(int argc, char** argv) {
             currentPid = job.pid;
             alarm(QUANTUM);
 #ifdef DEBUG
-            std::cout << DEBUG_PRINT << "Executed proccess: " << job.pid
+            std::cout << DEBUG_PRINT(magenta) << "Executed proccess: " << job.pid
                       << std::endl;
-            std::cout << DEBUG_PRINT << "Priority = " << job.priority + 1
+            std::cout << DEBUG_PRINT(magenta) << "Priority = " << job.priority + 1
                       << std::endl;
 #endif
         }

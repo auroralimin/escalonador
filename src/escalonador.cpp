@@ -8,13 +8,13 @@
 #include "common.h"
 
 int mbId;
-pid_t ppid;
+pid_t ppid, epid;
 std::map<pid_t, std::string> jobs;
 
 void waitChilds(int) {
     pid_t pid;
     while ((pid = waitpid((pid_t)(-1), 0, WNOHANG)) > 0) {
-        jobs.erase(pid);
+		if (pid != epid) jobs.erase(pid);
     }
 }
 
@@ -77,7 +77,7 @@ void waitTuple(std::string tuple) {
     hour = std::stoi(tokens[0].substr(0, pos));
     min = std::stoi(tokens[0].substr(pos + 1, tokens[0].length()));
     time = (60 * hour + min) * 60;
-    // sleep(time);
+    sleep(time);
 
     unsigned int nJobs = std::stoi(tokens[1]);
     struct bufferJob buffer;
@@ -90,7 +90,7 @@ void waitTuple(std::string tuple) {
     strcpy(buffer.job.file, tokens[3].c_str());
     for (int i = 0; i < nJobs; i++) {
 #ifdef DEBUG
-        std::cout << DEBUG_PRINT << "Copia " << i << " sendo enviada.."
+        std::cout << DEBUG_PRINT(green) << "Send copy " << i << ".."
                   << std::endl;
 #endif
         if (msgsnd(mbId, (void*)&buffer, sizeof(buffer.job), IPC_NOWAIT) ==
@@ -111,13 +111,21 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
+	if ((epid = fork()) == 0) {
+		if (execl(ESCALONA_EXEC, ESCALONA_EXEC, NULL) == -1) {
+			std::cerr << "Nao conseguiu abrir o escalona_jobs " << std::endl;
+			std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
+			exit(EXIT_FAILURE);
+		}
+	}
+
     std::ofstream stm(VERIFICA_PID_FILE, std::ofstream::out);
     stm << getpid() << std::endl;
     stm.close();
 
     ppid = getpid();
 #ifdef DEBUG
-    std::cout << DEBUG_PRINT << "ppid = " << ppid << std::endl;
+    std::cout << DEBUG_PRINT(green) << "verifica ppid = " << ppid << std::endl;
 #endif
     signal(SIGCHLD, waitChilds);
     signal(SIGUSR1, listTuples);
