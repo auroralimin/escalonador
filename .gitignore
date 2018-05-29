@@ -7,3 +7,7 @@
 *lista_postergados
 *shutdown_postergado
 *hello_world
+
+# generated files
+dep/*
+obj/*
