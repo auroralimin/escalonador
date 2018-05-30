@@ -14,8 +14,9 @@
 
 #include <unistd.h>
 
+#define UNUSED_VAR (void)
+
 #define QUANTUM 5
-#define DEBUG true
 #define N_QUEUES 3
 
 #define MAILBOX 1234

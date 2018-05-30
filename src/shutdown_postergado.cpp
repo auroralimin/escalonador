@@ -1,6 +1,9 @@
 #include "common.h"
 
 int main(int argc, char** argv) {
+    UNUSED_VAR argc;
+    UNUSED_VAR argv;
+
     pid_t vPid;
     std::ifstream vStm(VERIFICA_PID_FILE, std::ifstream::in);
     vStm >> vPid;
@@ -36,8 +39,8 @@ int main(int argc, char** argv) {
     std::cout << vBuffer.mtext;
     std::cout << BOLD << COLOR(blue) << "-------------------------------------"
               << "------------------------------------------------------------"
+              << "-----------------"
               << OFF << std::endl;
-
     std::cout << std::endl;
 
     struct bufferJob eBuffer;
@@ -53,7 +56,9 @@ int main(int argc, char** argv) {
     }
     std::cout << BOLD << COLOR(blue) << "-------------------------------------"
               << "------------------------------------------------------------"
+              << "-----------------"
               << OFF << std::endl;
+    std::cout << std::endl;
 
     std::cout << BOLD << COLOR(blue) << "Processos que estavam na fila de"
               << " execução e serão interrompidos:\n(OBS: pid 0 significa que"
@@ -70,7 +75,9 @@ int main(int argc, char** argv) {
     }
     std::cout << BOLD << COLOR(blue) << "-------------------------------------"
               << "------------------------------------------------------------"
+              << "-----------------"
               << OFF << std::endl;
     kill(vPid, SIGTERM);
     return 0;
 }
+

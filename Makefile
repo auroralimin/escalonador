@@ -44,7 +44,7 @@ $(BIN_PATH)/%.o: $(SRC_PATH)/%.cpp
 print-% : ; @echo $* = $($*)
 
 # Regra que inclui diretivas de debug na compilação
-debug: DIRECTIVES += -ggdb -Wall -Wextra -O0
+debug: DIRECTIVES += -ggdb -Wall -Wextra -O0 -DDEBUG
 debug: all
 
 # Regra que inclui diretivas de compilação otimizada

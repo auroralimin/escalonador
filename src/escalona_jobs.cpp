@@ -12,6 +12,62 @@ pid_t currentPid = 0;
 std::list<struct job> queues[N_QUEUES];
 std::list<struct job> finishedJobs;
 
+void cleanQueues();
+int firstQueueNotEmpty();
+void runJob();
+void jobQuantum(int);
+void jobFinished(int);
+void eShutdown(int);
+
+int main(int argc, char** argv) {
+    UNUSED_VAR argc;
+    UNUSED_VAR argv;
+    mbId = msgget(MAILBOX, MAIL_PERMISSION);
+    if (mbId == -1) {
+        std::cerr << "Nao conseguiu abrir a caixa postal, chave: " << MAILBOX
+            << std::endl;
+        std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    std::ofstream stm(ESCALONA_PID_FILE, std::ofstream::out);
+    stm << getpid() << std::endl;
+    stm.close();
+
+    signal(SIGALRM, jobQuantum);
+    signal(SIGCHLD, jobFinished);
+    signal(SIGUSR2, eShutdown);
+
+#ifdef DEBUG
+    std::cout << DEBUG_PRINT(magenta) << "escalona ppid = "
+              << getpid() << std::endl;
+#endif
+    struct bufferJob buffer;
+    while (true) {
+        if (msgrcv(mbId, (void*)&buffer,
+                  sizeof(buffer.job), MSG_JOB, 0) == -1) {
+            if (errno != EINTR) {
+                std::cerr << "Problema de comunicacao entre caixas postais"
+                    << std::endl;
+                std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
+                exit(EXIT_FAILURE);
+            }
+        } else {
+#ifdef DEBUG
+            std::cout << DEBUG_PRINT(magenta) << "Received msg: "
+                      << buffer.job.file << std::endl;
+#endif
+            auto cTime = std::chrono::system_clock::now();
+            std::time_t iTime = std::chrono::system_clock::to_time_t(cTime);
+            std::string initTime = std::string(std::ctime(&iTime));
+            initTime = initTime.substr(0, initTime.size() - 1);
+            strcpy(buffer.job.initTime, initTime.c_str());
+            queues[buffer.job.priority].push_back(buffer.job);
+            if (!executing) runJob();
+        }
+    }
+}
+
 void cleanQueues() {
     for (int i = 0; i < N_QUEUES; i++) {
         while ((!queues[i].empty()) && (queues[i].front().finished)) {
@@ -41,7 +97,7 @@ void runJob() {
         std::cout << DEBUG_PRINT(magenta) << "Executed for the 1sr time"
             << std::endl;
 #endif
-        job.descending = true;
+        job.descending = job.priority == 0 ? true : false;
         job.oldQueue = false;
         job.finished = false;
         pid_t pid = fork();
@@ -207,49 +263,3 @@ void eShutdown(int) {
     exit(0);
 }
 
-int main(int argc, char** argv) {
-    mbId = msgget(MAILBOX, MAIL_PERMISSION);
-    if (mbId == -1) {
-        std::cerr << "Nao conseguiu abrir a caixa postal, chave: " << MAILBOX
-            << std::endl;
-        std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    std::ofstream stm(ESCALONA_PID_FILE, std::ofstream::out);
-    stm << getpid() << std::endl;
-    stm.close();
-
-    signal(SIGALRM, jobQuantum);
-    signal(SIGCHLD, jobFinished);
-    signal(SIGUSR2, eShutdown);
-
-#ifdef DEBUG
-    std::cout << DEBUG_PRINT(magenta) << "escalona ppid = "
-              << getpid() << std::endl;
-#endif
-    struct bufferJob buffer;
-    while (true) {
-        if (msgrcv(mbId, (void*)&buffer,
-                  sizeof(buffer.job), MSG_JOB, 0) == -1) {
-            if (errno != EINTR) {
-                std::cerr << "Problema de comunicacao entre caixas postais"
-                    << std::endl;
-                std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
-                exit(EXIT_FAILURE);
-            }
-        } else {
-#ifdef DEBUG
-            std::cout << DEBUG_PRINT(magenta) << "Received msg: "
-                      << buffer.job.file << std::endl;
-#endif
-            auto cTime = std::chrono::system_clock::now();
-            std::time_t iTime = std::chrono::system_clock::to_time_t(cTime);
-            std::string initTime = std::string(std::ctime(&iTime));
-            initTime = initTime.substr(0, initTime.size() - 1);
-            strcpy(buffer.job.initTime, initTime.c_str());
-            queues[buffer.job.priority].push_back(buffer.job);
-            if (!executing) runJob();
-        }
-    }
-}

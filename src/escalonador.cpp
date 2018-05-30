@@ -11,6 +11,75 @@ int mbId;
 pid_t ppid, epid;
 std::map<pid_t, std::string> jobs;
 
+void waitChilds(int);
+void sendTuple(msg_type type);
+void listTuples(int);
+void epitaph(int);
+void vShutdown(int);
+void waitTuple(std::string tuple);
+
+int main(int argc, char** argv) {
+    UNUSED_VAR argc;
+    UNUSED_VAR argv;
+
+    mbId = msgget(MAILBOX, IPC_CREAT | MAIL_PERMISSION);
+    if (mbId == -1) {
+        std::cerr << "Nao conseguiu criar a caixa postal, chave: " << MAILBOX
+                  << std::endl;
+        std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+	if ((epid = fork()) == 0) {
+		if (execl(ESCALONA_EXEC, ESCALONA_EXEC, NULL) == -1) {
+			std::cerr << "Nao conseguiu abrir o escalona_jobs " << std::endl;
+			std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
+			exit(EXIT_FAILURE);
+		}
+	}
+
+    std::ofstream stm(VERIFICA_PID_FILE, std::ofstream::out);
+    stm << getpid() << std::endl;
+    stm.close();
+
+    ppid = getpid();
+#ifdef DEBUG
+    std::cout << DEBUG_PRINT(green) << "verifica ppid = " << ppid << std::endl;
+#endif
+    signal(SIGCHLD, waitChilds);
+    signal(SIGUSR1, listTuples);
+    signal(SIGUSR2, vShutdown);
+    signal(SIGTERM, epitaph);
+    signal(SIGQUIT, epitaph);
+    signal(SIGINT, epitaph);
+
+    struct bufferTuple bufferTuple1, bufferTuple2;
+    while (true) {
+        if (msgrcv(mbId, (void*)&bufferTuple1, sizeof(bufferTuple1.mtext),
+                   MSG_TUPLE, 0) == -1) {
+            continue;
+        }
+
+        pid_t pid = fork();
+        if (pid == 0) {
+            waitTuple(std::string(bufferTuple1.mtext));
+            return 0;
+        } else {
+            jobs[pid] = std::string(bufferTuple1.mtext);
+
+            bufferTuple2.mtype = MSG_REPLY;
+            strcpy(bufferTuple2.mtext, std::to_string(pid).c_str());
+            if (msgsnd(mbId, (void*)&bufferTuple2, sizeof(bufferTuple2.mtext),
+                       0) == -1) {
+                std::cerr << "Nao conseguiu enviar resposta da tupla"
+                          << std::endl;
+                std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+}
+
 void waitChilds(int) {
     pid_t pid;
     while ((pid = waitpid((pid_t)(-1), 0, WNOHANG)) > 0) {
@@ -88,7 +157,7 @@ void waitTuple(std::string tuple) {
     submitTime = submitTime.substr(0, submitTime.size() - 1);
     strcpy(buffer.job.submitTime, submitTime.c_str());
     strcpy(buffer.job.file, tokens[3].c_str());
-    for (int i = 0; i < nJobs; i++) {
+    for (unsigned int i = 0; i < nJobs; i++) {
 #ifdef DEBUG
         std::cout << DEBUG_PRINT(green) << "Send copy " << i << ".."
                   << std::endl;
@@ -102,61 +171,3 @@ void waitTuple(std::string tuple) {
     }
 }
 
-int main(int argc, char** argv) {
-    mbId = msgget(MAILBOX, IPC_CREAT | MAIL_PERMISSION);
-    if (mbId == -1) {
-        std::cerr << "Nao conseguiu criar a caixa postal, chave: " << MAILBOX
-                  << std::endl;
-        std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-	if ((epid = fork()) == 0) {
-		if (execl(ESCALONA_EXEC, ESCALONA_EXEC, NULL) == -1) {
-			std::cerr << "Nao conseguiu abrir o escalona_jobs " << std::endl;
-			std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
-			exit(EXIT_FAILURE);
-		}
-	}
-
-    std::ofstream stm(VERIFICA_PID_FILE, std::ofstream::out);
-    stm << getpid() << std::endl;
-    stm.close();
-
-    ppid = getpid();
-#ifdef DEBUG
-    std::cout << DEBUG_PRINT(green) << "verifica ppid = " << ppid << std::endl;
-#endif
-    signal(SIGCHLD, waitChilds);
-    signal(SIGUSR1, listTuples);
-    signal(SIGUSR2, vShutdown);
-    signal(SIGTERM, epitaph);
-    signal(SIGQUIT, epitaph);
-    signal(SIGINT, epitaph);
-
-    struct bufferTuple bufferTuple1, bufferTuple2;
-    while (true) {
-        if (msgrcv(mbId, (void*)&bufferTuple1, sizeof(bufferTuple1.mtext),
-                   MSG_TUPLE, 0) == -1) {
-            continue;
-        }
-
-        pid_t pid = fork();
-        if (pid == 0) {
-            waitTuple(std::string(bufferTuple1.mtext));
-            return 0;
-        } else {
-            jobs[pid] = std::string(bufferTuple1.mtext);
-
-            bufferTuple2.mtype = MSG_REPLY;
-            strcpy(bufferTuple2.mtext, std::to_string(pid).c_str());
-            if (msgsnd(mbId, (void*)&bufferTuple2, sizeof(bufferTuple2.mtext),
-                       0) == -1) {
-                std::cerr << "Nao conseguiu enviar resposta da tupla"
-                          << std::endl;
-                std::cerr << ERROR_PRINT << strerror(errno) << std::endl;
-                exit(EXIT_FAILURE);
-            }
-        }
-    }
-}

@@ -4,6 +4,9 @@
 #include "common.h"
 
 int main(int argc, char** argv) {
+    UNUSED_VAR argc;
+    UNUSED_VAR argv;
+
     std::ifstream stm(VERIFICA_PID_FILE, std::ifstream::in);
     pid_t pid;
     stm >> pid;
