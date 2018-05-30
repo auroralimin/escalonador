@@ -4,6 +4,7 @@ int main(int argc, char** argv) {
     UNUSED_VAR argc;
     UNUSED_VAR argv;
 
+    // pid's dos processos do escalonador
     pid_t vPid;
     std::ifstream vStm(VERIFICA_PID_FILE, std::ifstream::in);
     vStm >> vPid;
@@ -14,6 +15,7 @@ int main(int argc, char** argv) {
     eStm >> ePid;
     eStm.close();
 
+    // caixa de mensagem criada pelo escalonador
     int mbId = msgget(MAILBOX, MAIL_PERMISSION);
     if (mbId == -1) {
         std::cerr << "Nao conseguiu abrir a caixa postal, chave: " << MAILBOX
@@ -22,9 +24,11 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
+    // envia sinal de shutdown para o escalonador
     kill(vPid, SIGUSR2);
     kill(ePid, SIGUSR2);
 
+    // recebe relatorio referente as tarefas que estavam em tempo de posterga
     struct bufferMap vBuffer;
     if (msgrcv(mbId, (void*)&vBuffer, sizeof(vBuffer.mtext), MSG_V_KILL, 0) ==
         -1) {
@@ -39,10 +43,10 @@ int main(int argc, char** argv) {
     std::cout << vBuffer.mtext;
     std::cout << BOLD << COLOR(blue) << "-------------------------------------"
               << "------------------------------------------------------------"
-              << "-----------------"
-              << OFF << std::endl;
+              << "-----------------" << OFF << std::endl;
     std::cout << std::endl;
 
+    // relatorio referente as tarefas que foram finalizadas
     struct bufferJob eBuffer;
     std::cout << BOLD << COLOR(blue) << "Processos finalizados" << OFF
               << std::endl;
@@ -56,10 +60,10 @@ int main(int argc, char** argv) {
     }
     std::cout << BOLD << COLOR(blue) << "-------------------------------------"
               << "------------------------------------------------------------"
-              << "-----------------"
-              << OFF << std::endl;
+              << "-----------------" << OFF << std::endl;
     std::cout << std::endl;
 
+    // relatorio das tarefas que ainda estavam executando
     std::cout << BOLD << COLOR(blue) << "Processos que estavam na fila de"
               << " execução e serão interrompidos:\n(OBS: pid 0 significa que"
               << " o processo foi para a fila de execução mas nunca começou a"
@@ -75,9 +79,7 @@ int main(int argc, char** argv) {
     }
     std::cout << BOLD << COLOR(blue) << "-------------------------------------"
               << "------------------------------------------------------------"
-              << "-----------------"
-              << OFF << std::endl;
+              << "-----------------" << OFF << std::endl;
     kill(vPid, SIGTERM);
     return 0;
 }
-

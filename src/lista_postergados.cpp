@@ -12,6 +12,7 @@ int main(int argc, char** argv) {
     stm >> pid;
     stm.close();
 
+    // caixa postal criada pelo escalonador
     int mbId = msgget(MAILBOX, MAIL_PERMISSION);
     if (mbId == -1) {
         std::cerr << "Nao conseguiu abrir a caixa postal, chave: " << MAILBOX
@@ -22,6 +23,7 @@ int main(int argc, char** argv) {
 
     kill(pid, SIGUSR1);
 
+    // recebe a lista das tarefas que estao postergadas
     struct bufferMap buffer;
     if (msgrcv(mbId, (void*)&buffer, sizeof(buffer.mtext), MSG_MAP, 0) == -1) {
         std::cerr << "Nao conseguiu receber a lista de postergados"

@@ -10,6 +10,9 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
+    // Manda SIGTERM para o processo com o pid passado
+    // esse pid eh o pid do processo que esta gerenciando
+    // a posterga da tarefa que ira ser removida
     kill(atoi(argv[1]), SIGTERM);
     return 0;
 }
